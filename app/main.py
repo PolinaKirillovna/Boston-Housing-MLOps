@@ -203,13 +203,23 @@ def predict(features: HouseFeatures) -> PredictionResponse:
 
     Returns:
         PredictionResponse with predicted house price.
+
+    Raises:
+        HTTPException: 503 if the trained model artifact is missing,
+            422 if the feature payload cannot be converted into a prediction.
     """
     try:
         model = load_model()
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    try:
         input_df = pd.DataFrame([features.model_dump()])[FEATURE_COLUMNS]
         prediction = float(model.predict(input_df)[0])
-        return PredictionResponse(predicted_medv=round(prediction, 4))
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Prediction failed: {exc}") from exc
+    except (KeyError, ValueError) as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid feature payload: {exc}",
+        ) from exc
+
+    return PredictionResponse(predicted_medv=round(prediction, 4))

@@ -59,6 +59,6 @@ def run_scenario() -> None:
 if __name__ == "__main__":
     try:
         run_scenario()
-    except Exception as exc:
+    except (AssertionError, requests.RequestException, FileNotFoundError) as exc:
         print(f"[ERROR] {exc}")
         sys.exit(1)
