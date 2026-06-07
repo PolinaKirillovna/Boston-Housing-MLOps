@@ -9,16 +9,16 @@ docker:
 
 git:
   last_5_commits:
-    - "<commit_hash_1>"
-    - "<commit_hash_2>"
-    - "<commit_hash_3>"
-    - "<commit_hash_4>"
-    - "<commit_hash_5>"
+    - "875128af5eea7d9dd6b9f8f247207ac65775f185"
+    - "6d0aa2452fef99a97e7ea6c798fede392e0f1399"
+    - "b93f76af39f2acf22b24491e53824218d833dba2"
+    - "c89d60c15bcc6291d8352e2e12c1b4d7fd0eb074"
+    - "fde3c6eeadfa6d8952db6639b2bbe3577ecc5076"
 
 quality:
   test_framework: pytest
   test_command: "pytest -v"
-  coverage_enabled: false
+  coverage: not_measured
 
 security:
   secrets_in_repo: false
