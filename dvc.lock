@@ -1,0 +1,30 @@
+schema: '2.0'
+stages:
+  train:
+    cmd: python -m src.train
+    deps:
+    - path: config.ini
+      hash: md5
+      md5: 69cef047bd552937588856dea3005d28
+      size: 317
+    - path: data/raw/train.csv
+      hash: md5
+      md5: 4173fd0ba5406345e918192c0e7d1694
+      size: 24128
+    - path: src/config.py
+      hash: md5
+      md5: dbc08d26f6f4d9350bd2ee0964daf9eb
+      size: 844
+    - path: src/train.py
+      hash: md5
+      md5: 86e1dfd1e6f7db3d986dfba59798d858
+      size: 4765
+    outs:
+    - path: metrics.json
+      hash: md5
+      md5: c465cb9ce7f3d57d4c54956f60a554ce
+      size: 138
+    - path: models/model.joblib
+      hash: md5
+      md5: c0a59db8d2d65aa38b6986a7e2073c96
+      size: 7067025
