@@ -3,17 +3,17 @@ project:
   repository_branch: master
 
 docker:
-  image_name: your_dockerhub_username/boston-housing-api
+  image_name: thedpk/boston-housing-api
   image_tag: latest
   signing: not_enabled
 
 git:
   last_5_commits:
+    - "b9480bc7a8c782c9410032f4f8d7400374ea42dd"
+    - "754cdfe67c6348189a5b37b33747b6ca35c57f30"
+    - "423338ae4dd920f91c189367d4a30cccc7b8f64a"
     - "875128af5eea7d9dd6b9f8f247207ac65775f185"
     - "6d0aa2452fef99a97e7ea6c798fede392e0f1399"
-    - "b93f76af39f2acf22b24491e53824218d833dba2"
-    - "c89d60c15bcc6291d8352e2e12c1b4d7fd0eb074"
-    - "fde3c6eeadfa6d8952db6639b2bbe3577ecc5076"
 
 quality:
   test_framework: pytest
