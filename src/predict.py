@@ -1,6 +1,12 @@
-"""Prediction utilities for batch inference on Boston Housing data."""
+"""Batch inference for Boston Housing data.
 
+Inference is organised as a BatchPredictor class that loads the trained model,
+validates incoming features and produces predictions / a submission file.
+"""
+
+from configparser import ConfigParser
 from pathlib import Path
+from typing import Optional
 
 import joblib
 import pandas as pd
@@ -9,103 +15,84 @@ from src.config import BASE_DIR, load_config
 from src.train import FEATURE_COLUMNS
 
 
-CONFIG = load_config()
+class BatchPredictor:
+    """Encapsulates batch prediction over Boston Housing data."""
 
-TEST_DATA_PATH = BASE_DIR / CONFIG["paths"]["test_data"]
-MODEL_PATH = BASE_DIR / CONFIG["paths"]["model_path"]
-SUBMISSION_PATH = BASE_DIR / CONFIG["paths"]["submission_path"]
+    feature_columns = FEATURE_COLUMNS
 
-ID_COL = CONFIG["project"]["id_col"]
+    def __init__(self, config: Optional[ConfigParser] = None) -> None:
+        """Initialise the predictor from project configuration."""
+        self.config = config or load_config()
+        self.model_path = BASE_DIR / self.config["paths"]["model_path"]
+        self.test_data_path = BASE_DIR / self.config["paths"]["test_data"]
+        self.submission_path = BASE_DIR / self.config["paths"]["submission_path"]
+        self.id_col = self.config["project"]["id_col"]
+        self._model = None
 
+    def load_model(self, model_path: Optional[Path] = None):
+        """Load and cache the serialized model artifact.
 
-def load_model(model_path: Path = MODEL_PATH):
-    """Load serialized model artifact from disk.
+        Raises:
+            FileNotFoundError: If the model file does not exist.
+        """
+        resolved = model_path or self.model_path
+        if not resolved.exists():
+            raise FileNotFoundError(
+                f"Model file not found: {resolved}. Run training first."
+            )
+        self._model = joblib.load(resolved)
+        return self._model
 
-    Args:
-        model_path: Path to the saved model.
+    def validate_feature_columns(self, df: pd.DataFrame) -> None:
+        """Validate that all required feature columns are present.
 
-    Returns:
-        Deserialized model instance.
+        Raises:
+            ValueError: If any expected feature is missing.
+        """
+        missing = set(self.feature_columns) - set(df.columns)
+        if missing:
+            raise ValueError(f"Missing feature columns: {sorted(missing)}")
 
-    Raises:
-        FileNotFoundError: If model file does not exist.
-    """
-    if not model_path.exists():
-        raise FileNotFoundError(
-            f"Model file not found: {model_path}. Run training first."
+    def predict_from_dataframe(self, df: pd.DataFrame):
+        """Generate predictions for a dataframe of features."""
+        self.validate_feature_columns(df)
+        model = self._model or self.load_model()
+        return model.predict(df[self.feature_columns])
+
+    def predict_test_file(self, test_path: Optional[Path] = None) -> pd.DataFrame:
+        """Run batch prediction for a test CSV and write a submission file.
+
+        Raises:
+            FileNotFoundError: If the test file does not exist.
+            ValueError: If the ID column is missing.
+        """
+        resolved = test_path or self.test_data_path
+        if not resolved.exists():
+            raise FileNotFoundError(f"Test file not found: {resolved}")
+
+        test_df = pd.read_csv(resolved)
+        if self.id_col not in test_df.columns:
+            raise ValueError(f"Missing ID column: {self.id_col}")
+
+        predictions = self.predict_from_dataframe(test_df)
+        submission = pd.DataFrame(
+            {self.id_col: test_df[self.id_col], "medv": predictions}
         )
+        submission.to_csv(self.submission_path, index=False)
 
-    return joblib.load(model_path)
+        print(f"Submission file saved to: {self.submission_path}")
+        print(submission.head())
+        return submission
 
-
-def validate_feature_columns(df: pd.DataFrame) -> None:
-    """Validate that all required feature columns are present.
-
-    Args:
-        df: Input dataframe for inference.
-
-    Raises:
-        ValueError: If any expected features are missing.
-    """
-    missing = set(FEATURE_COLUMNS) - set(df.columns)
-    if missing:
-        raise ValueError(f"Missing feature columns: {sorted(missing)}")
+    def run(self) -> pd.DataFrame:
+        """Entry point: produce the submission from the configured test file."""
+        return self.predict_test_file()
 
 
-def predict_from_dataframe(df: pd.DataFrame):
-    """Generate predictions for a dataframe.
-
-    Args:
-        df: Input dataframe containing model features.
-
-    Returns:
-        Array-like model predictions.
-    """
-    validate_feature_columns(df)
-
-    model = load_model()
-    x_data = df[FEATURE_COLUMNS]
-    predictions = model.predict(x_data)
-    return predictions
-
-
-def predict_test_file(test_path: Path = TEST_DATA_PATH) -> pd.DataFrame:
-    """Run batch prediction for test.csv and create submission.csv.
-
-    Args:
-        test_path: Path to test CSV file.
-
-    Returns:
-        Submission dataframe with columns ID and medv.
-
-    Raises:
-        FileNotFoundError: If test file does not exist.
-        ValueError: If ID column is missing.
-    """
-    if not test_path.exists():
-        raise FileNotFoundError(f"Test file not found: {test_path}")
-
-    test_df = pd.read_csv(test_path)
-
-    if ID_COL not in test_df.columns:
-        raise ValueError(f"Missing ID column: {ID_COL}")
-
-    predictions = predict_from_dataframe(test_df)
-
-    submission = pd.DataFrame(
-        {
-            ID_COL: test_df[ID_COL],
-            "medv": predictions,
-        }
-    )
-
-    submission.to_csv(SUBMISSION_PATH, index=False)
-
-    print(f"Submission file saved to: {SUBMISSION_PATH}")
-    print(submission.head())
-
-    return submission
+def main() -> None:
+    """Entry point for `python -m src.predict`."""
+    BatchPredictor().run()
 
 
 if __name__ == "__main__":
-    predict_test_file()
+    main()
